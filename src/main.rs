@@ -51,6 +51,7 @@ macro_rules! impl_to_string_array {
 
 impl_to_string_array!(
     BooleanArray,
+    Float16Array,
     Float32Array,
     Float64Array,
     Int8Array,
@@ -84,6 +85,7 @@ macro_rules! impl_from_array_primitive {
 }
 
 impl_from_array_primitive!(
+    (Float16Array, Float16Type),
     (Float32Array, Float32Type),
     (Float64Array, Float64Type),
     (Int8Array, Int8Type),
@@ -117,6 +119,7 @@ fn transform_array(arr: &dyn Array) -> &dyn ToStringArray {
     case_as_primitive!(
         arr,
         BooleanType,
+        Float16Type,
         Float32Type,
         Float64Type,
         Int8Type,
