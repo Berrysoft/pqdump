@@ -23,15 +23,30 @@ struct Options {
     no_types: bool,
     #[command(flatten)]
     slice: SliceOptions,
+    #[command(flatten)]
+    col: ColOptions,
 }
 
 #[derive(Debug, Parser)]
 #[group(multiple = false)]
 struct SliceOptions {
     #[arg(long)]
+    /// Print the first rows.
     head: Option<usize>,
     #[arg(long)]
+    /// Print the last rows.
     tail: Option<usize>,
+}
+
+#[derive(Debug, Parser)]
+#[group(multiple = false)]
+struct ColOptions {
+    #[arg(long)]
+    /// Print the specified columns.
+    columns: Option<Vec<String>>,
+    #[arg(long)]
+    /// Suppress the specified columns.
+    exclude: Option<Vec<String>>,
 }
 
 #[derive(Debug, Tabled)]
@@ -161,9 +176,9 @@ fn main() -> Result<()> {
             .try_fold(0, |sum, i| i.map(|i| sum + i))?;
         println!("{}", len);
     } else {
+        let schema = reader.schema();
         if !args.no_types {
-            let fields = reader
-                .schema()
+            let fields = schema
                 .fields()
                 .iter()
                 .map(|f| PrintedField::from(f.as_ref()))
@@ -171,12 +186,21 @@ fn main() -> Result<()> {
             println!("{}", Table::new(fields).with(Style::rounded()));
         }
         if !args.only_types {
-            let field_names = reader
-                .schema()
-                .fields()
-                .iter()
-                .map(|f| f.name().clone())
-                .collect::<Vec<_>>();
+            let field_names = schema.fields().iter().map(|f| f.name().clone());
+            let (field_indices, field_names): (Vec<_>, Vec<_>) =
+                if let Some(columns) = args.col.columns {
+                    field_names
+                        .enumerate()
+                        .filter(|(_, n)| columns.contains(n))
+                        .unzip()
+                } else if let Some(exclude) = args.col.exclude {
+                    field_names
+                        .enumerate()
+                        .filter(|(_, n)| !exclude.contains(n))
+                        .unzip()
+                } else {
+                    field_names.enumerate().unzip()
+                };
             let rows = reader
                 .into_iter()
                 .map(|batch| {
@@ -184,7 +208,9 @@ fn main() -> Result<()> {
                         let columns = batch
                             .columns()
                             .iter()
-                            .map(|c| transform_array(c.as_ref()))
+                            .enumerate()
+                            .filter(|(i, _)| field_indices.contains(i))
+                            .map(|(_, c)| transform_array(c.as_ref()))
                             .collect::<Vec<_>>();
                         (0..batch.num_rows())
                             .map(|i| {
