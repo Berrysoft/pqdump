@@ -15,6 +15,9 @@ use tabled::{builder::Builder, settings::Style, Table, Tabled};
 struct Options {
     #[arg()]
     input: OsString,
+    #[arg(short = 'A', long)]
+    /// Print the datatypes.
+    onlyattr: bool,
 }
 
 #[derive(Debug, Tabled)]
@@ -80,31 +83,33 @@ fn main() -> Result<()> {
         .map(|f| PrintedField::from(f.as_ref()))
         .collect::<Vec<_>>();
     println!("{}", Table::new(fields).with(Style::rounded()));
-    for batch in reader {
-        let batch = batch?;
-        let field_names = batch
-            .schema()
-            .fields()
-            .iter()
-            .map(|f| f.name().clone())
-            .collect::<Vec<_>>();
-        let columns = batch
-            .columns()
-            .iter()
-            .map(|c| transform_array(c.as_ref()))
-            .collect::<Vec<_>>();
-        if let Some(col) = columns.get(0) {
-            let len = col.get_len();
-            let mut builder = Builder::default();
-            for i in 0..len {
-                let row = columns
-                    .iter()
-                    .map(|col| col.get_string(i))
-                    .collect::<Vec<_>>();
-                builder.push_record(row);
+    if !args.onlyattr {
+        for batch in reader {
+            let batch = batch?;
+            let field_names = batch
+                .schema()
+                .fields()
+                .iter()
+                .map(|f| f.name().clone())
+                .collect::<Vec<_>>();
+            let columns = batch
+                .columns()
+                .iter()
+                .map(|c| transform_array(c.as_ref()))
+                .collect::<Vec<_>>();
+            if let Some(col) = columns.get(0) {
+                let len = col.get_len();
+                let mut builder = Builder::default();
+                for i in 0..len {
+                    let row = columns
+                        .iter()
+                        .map(|col| col.get_string(i))
+                        .collect::<Vec<_>>();
+                    builder.push_record(row);
+                }
+                builder.set_header(field_names);
+                println!("{}", builder.build().with(Style::rounded()));
             }
-            builder.set_header(field_names);
-            println!("{}", builder.build().with(Style::rounded()));
         }
     }
     Ok(())
