@@ -123,6 +123,10 @@ fn transform_array(arr: &dyn Array) -> &dyn ToStringArray {
         Int16Type,
         Int32Type,
         Int64Type,
+        UInt8Type,
+        UInt16Type,
+        UInt32Type,
+        UInt64Type,
     )
 }
 
