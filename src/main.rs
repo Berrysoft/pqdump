@@ -41,10 +41,10 @@ struct SliceOptions {
 #[derive(Debug, Parser)]
 #[group(multiple = false)]
 struct ColOptions {
-    #[arg(long)]
+    #[arg(long, value_delimiter = ',')]
     /// Print the specified columns.
     columns: Option<Vec<String>>,
-    #[arg(long)]
+    #[arg(long, value_delimiter = ',')]
     /// Suppress the specified columns.
     exclude: Option<Vec<String>>,
 }
