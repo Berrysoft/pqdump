@@ -1,5 +1,6 @@
 use anyhow::Result;
-use arrow_array::{cast::AsArray, types::*, *};
+use arrow_array::RecordBatchReader;
+use arrow_cast::display::{ArrayFormatter, FormatOptions};
 use arrow_schema::{DataType, Field};
 use clap::Parser;
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
@@ -66,106 +67,6 @@ impl From<&Field> for PrintedField {
     }
 }
 
-trait ToStringArray: Array {
-    fn get_string(&self, i: usize) -> String;
-}
-
-macro_rules! impl_to_string_array {
-    ($($t: ty),* $(,)?) => {
-        $(
-            impl ToStringArray for $t {
-                fn get_string(&self, i: usize) -> String {
-                    self.value(i).to_string()
-                }
-            }
-        )*
-    };
-}
-
-impl_to_string_array!(
-    BooleanArray,
-    Float16Array,
-    Float32Array,
-    Float64Array,
-    Int8Array,
-    Int16Array,
-    Int32Array,
-    Int64Array,
-    UInt8Array,
-    UInt16Array,
-    UInt32Array,
-    UInt64Array,
-);
-
-trait FromDynArray {
-    type ArrayType: Array;
-
-    fn from_dyn_array(arr: &dyn Array) -> &Self::ArrayType;
-}
-
-macro_rules! impl_from_array_primitive {
-    ($(($arrty: ty, $t: ty)),* $(,)?) => {
-        $(
-            impl FromDynArray for $t {
-                type ArrayType = $arrty;
-
-                fn from_dyn_array(arr: &dyn Array) -> &Self::ArrayType {
-                    arr.as_primitive::<$t>()
-                }
-            }
-        )*
-    };
-}
-
-impl_from_array_primitive!(
-    (Float16Array, Float16Type),
-    (Float32Array, Float32Type),
-    (Float64Array, Float64Type),
-    (Int8Array, Int8Type),
-    (Int16Array, Int16Type),
-    (Int32Array, Int32Type),
-    (Int64Array, Int64Type),
-    (UInt8Array, UInt8Type),
-    (UInt16Array, UInt16Type),
-    (UInt32Array, UInt32Type),
-    (UInt64Array, UInt64Type),
-);
-
-impl FromDynArray for BooleanType {
-    type ArrayType = BooleanArray;
-
-    fn from_dyn_array(arr: &dyn Array) -> &Self::ArrayType {
-        arr.as_boolean()
-    }
-}
-
-macro_rules! case_as_primitive {
-    ($arr: expr, $($t: ty),* $(,)?) => {
-        match $arr.data_type() {
-            $(&<$t>::DATA_TYPE => <$t>::from_dyn_array($arr),)*
-            _ => unimplemented!("Unsupported data type"),
-        }
-    };
-}
-
-fn transform_array(arr: &dyn Array) -> &dyn ToStringArray {
-    case_as_primitive!(
-        arr,
-        BooleanType,
-        Float16Type,
-        Float32Type,
-        Float64Type,
-        Int8Type,
-        Int16Type,
-        Int32Type,
-        Int64Type,
-        UInt8Type,
-        UInt16Type,
-        UInt32Type,
-        UInt64Type,
-    )
-}
-
 fn main() -> Result<()> {
     let args = Options::parse();
     let reader = ParquetRecordBatchReaderBuilder::try_new(File::open(args.input)?)?.build()?;
@@ -210,19 +111,20 @@ fn main() -> Result<()> {
                             .iter()
                             .enumerate()
                             .filter(|(i, _)| field_indices.contains(i))
-                            .map(|(_, c)| transform_array(c.as_ref()))
-                            .collect::<Vec<_>>();
-                        (0..batch.num_rows())
-                            .map(|i| {
-                                anyhow::Ok(
+                            .map(|(_, c)| ArrayFormatter::try_new(c, &FormatOptions::default()))
+                            .try_collect::<Vec<_>>();
+                        match columns {
+                            Ok(columns) => (0..batch.num_rows())
+                                .map(|i| {
                                     columns
                                         .iter()
-                                        .map(|col| col.get_string(i))
-                                        .collect::<Vec<_>>(),
-                                )
-                            })
-                            .collect::<Vec<_>>()
-                            .into_iter()
+                                        .map(|col| col.value(i).try_to_string())
+                                        .try_collect::<Vec<_>>()
+                                })
+                                .collect::<Vec<_>>()
+                                .into_iter(),
+                            Err(e) => vec![Err(e)].into_iter(),
+                        }
                     })
                 })
                 .try_flatten();

@@ -10,6 +10,7 @@ tabled = "0.13"
 tryiterator = { git = "https://github.com/Pernosco/tryiterator.git" }
 
 arrow-array = "44"
+arrow-cast = "44"
 arrow-schema = "44"
 parquet = "44"
 
