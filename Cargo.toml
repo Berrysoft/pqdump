@@ -1,0 +1,13 @@
+[package]
+name = "pqdump"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+tabled = "0.13"
+
+arrow-array = "44"
+arrow-schema = "44"
+parquet = "44"
