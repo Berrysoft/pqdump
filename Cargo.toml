@@ -11,3 +11,7 @@ tabled = "0.13"
 arrow-array = "44"
 arrow-schema = "44"
 parquet = "44"
+
+[profile.release]
+lto = true
+codegen-units = 1
