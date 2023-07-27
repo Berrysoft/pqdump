@@ -12,8 +12,11 @@ struct Options {
     #[arg()]
     input: OsString,
     #[arg(short = 'A', long)]
-    /// Print the datatypes.
-    onlyattr: bool,
+    /// Print the datatypes only.
+    only_types: bool,
+    #[arg(long)]
+    /// Suppress printing the datatypes.
+    no_types: bool,
 }
 
 #[derive(Debug, Tabled)]
@@ -136,14 +139,16 @@ fn transform_array(arr: &dyn Array) -> &dyn ToStringArray {
 fn main() -> Result<()> {
     let args = Options::parse();
     let reader = ParquetRecordBatchReaderBuilder::try_new(File::open(args.input)?)?.build()?;
-    let fields = reader
-        .schema()
-        .fields()
-        .iter()
-        .map(|f| PrintedField::from(f.as_ref()))
-        .collect::<Vec<_>>();
-    println!("{}", Table::new(fields).with(Style::rounded()));
-    if !args.onlyattr {
+    if !args.no_types {
+        let fields = reader
+            .schema()
+            .fields()
+            .iter()
+            .map(|f| PrintedField::from(f.as_ref()))
+            .collect::<Vec<_>>();
+        println!("{}", Table::new(fields).with(Style::rounded()));
+    }
+    if !args.only_types {
         for batch in reader {
             let batch = batch?;
             let field_names = batch
