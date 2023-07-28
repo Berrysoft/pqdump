@@ -4,7 +4,7 @@ use arrow_cast::display::{ArrayFormatter, FormatOptions};
 use arrow_schema::{DataType, Field};
 use clap::Parser;
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
-use std::{collections::VecDeque, ffi::OsString, fs::File};
+use std::{ffi::OsString, fs::File};
 use tabled::{builder::Builder, settings::Style, Table, Tabled};
 use tryiterator::TryIteratorExt;
 
@@ -69,12 +69,10 @@ impl From<&Field> for PrintedField {
 
 fn main() -> Result<()> {
     let args = Options::parse();
-    let reader = ParquetRecordBatchReaderBuilder::try_new(File::open(args.input)?)?.build()?;
+    let reader = ParquetRecordBatchReaderBuilder::try_new(File::open(args.input)?)?;
+    let len = reader.metadata().file_metadata().num_rows() as usize;
+    let reader = reader.build()?;
     if args.length {
-        let len = reader
-            .into_iter()
-            .map(|batch| batch.map(|batch| batch.num_rows()))
-            .try_fold(0, |sum, i| i.map(|i| sum + i))?;
         println!("{}", len);
     } else {
         let schema = reader.schema();
@@ -131,14 +129,8 @@ fn main() -> Result<()> {
             if let Some(head) = args.slice.head {
                 print_contents(field_names, rows.take(head))?;
             } else if let Some(tail) = args.slice.tail {
-                let mut buf = VecDeque::new();
-                for row in rows {
-                    buf.push_back(row);
-                    if buf.len() > tail {
-                        buf.pop_front();
-                    }
-                }
-                print_contents(field_names, buf.into_iter())?;
+                let skip = if len <= tail { 0 } else { len - tail };
+                print_contents(field_names, rows.skip(skip))?;
             } else {
                 print_contents(field_names, rows)?;
             }
