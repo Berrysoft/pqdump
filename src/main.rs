@@ -22,6 +22,9 @@ struct Options {
     #[arg(long)]
     /// Suppress printing the datatypes.
     no_types: bool,
+    #[arg(short, long, default_value = "1024")]
+    /// Batch size.
+    batch: usize,
     #[command(flatten)]
     slice: SliceOptions,
     #[command(flatten)]
@@ -69,7 +72,8 @@ impl From<&Field> for PrintedField {
 
 fn main() -> Result<()> {
     let args = Options::parse();
-    let reader = ParquetRecordBatchReaderBuilder::try_new(File::open(args.input)?)?;
+    let reader = ParquetRecordBatchReaderBuilder::try_new(File::open(args.input)?)?
+        .with_batch_size(args.batch);
     let len = reader.metadata().file_metadata().num_rows() as usize;
     let reader = reader.build()?;
     if args.length {
@@ -100,8 +104,22 @@ fn main() -> Result<()> {
                 } else {
                     field_names.enumerate().unzip()
                 };
+            let (skip, take) = if let Some(head) = args.slice.head {
+                (0, head.min(len))
+            } else if let Some(tail) = args.slice.tail {
+                if len <= tail {
+                    (0, len)
+                } else {
+                    (len - tail, tail)
+                }
+            } else {
+                (0, len)
+            };
+            let skip_batches = skip / args.batch;
+            let skip = skip % args.batch;
             let rows = reader
                 .into_iter()
+                .skip(skip_batches)
                 .map(|batch| {
                     batch.map(|batch| {
                         let columns = batch
@@ -126,14 +144,7 @@ fn main() -> Result<()> {
                     })
                 })
                 .try_flatten();
-            if let Some(head) = args.slice.head {
-                print_contents(field_names, rows.take(head))?;
-            } else if let Some(tail) = args.slice.tail {
-                let skip = if len <= tail { 0 } else { len - tail };
-                print_contents(field_names, rows.skip(skip))?;
-            } else {
-                print_contents(field_names, rows)?;
-            }
+            print_contents(field_names, rows.skip(skip).take(take))?;
         }
     }
     Ok(())
