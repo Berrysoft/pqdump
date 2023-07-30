@@ -117,33 +117,33 @@ fn main() -> Result<()> {
             };
             let skip_batches = skip / args.batch;
             let skip = skip % args.batch;
-            let rows = reader
+            let take_batches = (skip + take) / args.batch;
+            let take_batches = if ((skip + take) % args.batch) != 0 {
+                take_batches + 1
+            } else {
+                take_batches
+            };
+            let batches = reader
                 .into_iter()
                 .skip(skip_batches)
+                .take(take_batches)
+                .try_collect::<Vec<_>>()?;
+            let columns = batches
+                .iter()
                 .map(|batch| {
-                    batch.map(|batch| {
-                        let columns = batch
-                            .columns()
-                            .iter()
-                            .enumerate()
-                            .filter(|(i, _)| field_indices.contains(i))
-                            .map(|(_, c)| ArrayFormatter::try_new(c, &FormatOptions::default()))
-                            .try_collect::<Vec<_>>();
-                        match columns {
-                            Ok(columns) => (0..batch.num_rows())
-                                .map(|i| {
-                                    columns
-                                        .iter()
-                                        .map(|col| col.value(i).try_to_string())
-                                        .try_collect::<Vec<_>>()
-                                })
-                                .collect::<Vec<_>>()
-                                .into_iter(),
-                            Err(e) => vec![Err(e)].into_iter(),
-                        }
-                    })
+                    batch
+                        .columns()
+                        .iter()
+                        .enumerate()
+                        .filter(|(i, _)| field_indices.contains(i))
+                        .map(|(_, c)| ArrayFormatter::try_new(c, &FormatOptions::default()))
+                        .try_collect::<Vec<_>>()
+                        .map(|columns| (batch.num_rows(), columns))
                 })
-                .try_flatten();
+                .try_collect::<Vec<_>>()?;
+            let rows = columns.iter().flat_map(|(num_rows, columns)| {
+                (0..*num_rows).map(|i| columns.iter().map(move |col| col.value(i).try_to_string()))
+            });
             print_contents(field_names, rows.skip(skip).take(take))?;
         }
     }
@@ -152,12 +152,11 @@ fn main() -> Result<()> {
 
 fn print_contents<E>(
     columns: Vec<String>,
-    rows: impl Iterator<Item = Result<Vec<String>, E>>,
+    rows: impl IntoIterator<Item = impl IntoIterator<Item = Result<String, E>>>,
 ) -> Result<(), E> {
     let mut builder = Builder::new();
-    for row in rows {
-        let row = row?;
-        builder.push_record(row);
+    for row in rows.into_iter() {
+        builder.push_record(row.into_iter().try_collect::<Vec<_>>()?);
     }
     builder.set_header(columns);
     println!("{}", builder.build().with(Style::rounded()));
