@@ -152,22 +152,15 @@ fn main() -> Result<()> {
                     (0..*num_rows)
                         .map(|i| columns.iter().map(move |col| col.value(i).try_to_string()))
                 });
-                print_contents(field_names, rows.skip(skip).take(take))?;
+                let rows = rows.skip(skip).take(take);
+                let mut builder = Builder::new();
+                for row in rows.into_iter() {
+                    builder.push_record(row.into_iter().try_collect::<Vec<_>>()?);
+                }
+                builder.set_header(field_names);
+                println!("{}", builder.build().with(Style::rounded()));
             }
         }
     }
-    Ok(())
-}
-
-fn print_contents<E>(
-    columns: Vec<String>,
-    rows: impl IntoIterator<Item = impl IntoIterator<Item = Result<String, E>>>,
-) -> Result<(), E> {
-    let mut builder = Builder::new();
-    for row in rows.into_iter() {
-        builder.push_record(row.into_iter().try_collect::<Vec<_>>()?);
-    }
-    builder.set_header(columns);
-    println!("{}", builder.build().with(Style::rounded()));
     Ok(())
 }
