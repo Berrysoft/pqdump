@@ -787,7 +787,6 @@ dependencies = [
  "clap",
  "comfy-table",
  "parquet",
- "zstd",
 ]
 
 [[package]]

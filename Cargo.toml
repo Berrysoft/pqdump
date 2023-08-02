@@ -12,8 +12,6 @@ arrow-array = "44"
 arrow-cast = "44"
 parquet = "44"
 
-zstd = { version = "0.12", features = ["pkg-config"] }
-
 [profile.release]
 lto = true
 codegen-units = 1
