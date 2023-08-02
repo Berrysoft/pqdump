@@ -10,6 +10,20 @@ use std::{ffi::OsString, fs::File};
 struct Options {
     #[arg()]
     input: OsString,
+    #[arg(short, long, default_value = "1024")]
+    /// Batch size.
+    batch: usize,
+    #[command(flatten)]
+    print: PrintOptions,
+    #[command(flatten)]
+    slice: SliceOptions,
+    #[command(flatten)]
+    col: ColOptions,
+}
+
+#[derive(Debug, Parser)]
+#[group(multiple = false)]
+struct PrintOptions {
     #[arg(short = 'n', long)]
     /// Print the number of rows and exit.
     length: bool,
@@ -22,13 +36,6 @@ struct Options {
     #[arg(long)]
     /// Suppress printing the datatypes.
     no_types: bool,
-    #[arg(short, long, default_value = "1024")]
-    /// Batch size.
-    batch: usize,
-    #[command(flatten)]
-    slice: SliceOptions,
-    #[command(flatten)]
-    col: ColOptions,
 }
 
 #[derive(Debug, Parser)]
@@ -58,18 +65,18 @@ fn main() -> Result<()> {
     let reader = ParquetRecordBatchReaderBuilder::try_new(File::open(args.input)?)?
         .with_batch_size(args.batch);
     let metadata = reader.metadata();
-    if args.num_row_groups {
+    if args.print.num_row_groups {
         println!("{}", metadata.num_row_groups());
         return Ok(());
     }
     let len = reader.metadata().file_metadata().num_rows() as usize;
     let reader = reader.build()?;
-    if args.length {
+    if args.print.length {
         println!("{}", len);
         return Ok(());
     }
     let schema = reader.schema();
-    if !args.no_types {
+    if !args.print.no_types {
         let fields = schema.fields().iter().map(|f| {
             vec![
                 Cell::new(f.name()),
@@ -86,7 +93,7 @@ fn main() -> Result<()> {
                 .add_rows(fields)
         );
     }
-    if !args.only_types {
+    if !args.print.only_types {
         let field_names = schema.fields().iter().map(|f| f.name().clone());
         let (field_indices, field_names): (Vec<_>, Vec<_>) = if let Some(columns) = args.col.columns
         {
