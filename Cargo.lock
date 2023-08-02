@@ -800,6 +800,7 @@ dependencies = [
  "clap",
  "parquet",
  "tabled",
+ "zstd",
 ]
 
 [[package]]
