@@ -6,11 +6,10 @@ edition = "2021"
 [dependencies]
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
-tabled = "0.13"
+comfy-table = { version = "7", default-features = false }
 
 arrow-array = "44"
 arrow-cast = "44"
-arrow-schema = "44"
 parquet = "44"
 
 zstd = { version = "0.12", features = ["pkg-config"] }

@@ -1,11 +1,10 @@
 use anyhow::Result;
 use arrow_array::RecordBatchReader;
 use arrow_cast::display::{ArrayFormatter, FormatOptions};
-use arrow_schema::{DataType, Field};
 use clap::Parser;
+use comfy_table::{modifiers::UTF8_ROUND_CORNERS, presets::UTF8_FULL_CONDENSED, Cell, Table};
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use std::{ffi::OsString, fs::File};
-use tabled::{builder::Builder, settings::Style, Table, Tabled};
 
 #[derive(Debug, Parser)]
 #[command(about, version, author)]
@@ -55,23 +54,6 @@ struct ColOptions {
     exclude: Option<Vec<String>>,
 }
 
-#[derive(Debug, Tabled)]
-struct PrintedField {
-    name: String,
-    data_type: DataType,
-    nullable: bool,
-}
-
-impl From<&Field> for PrintedField {
-    fn from(value: &Field) -> Self {
-        Self {
-            name: value.name().clone(),
-            data_type: value.data_type().clone(),
-            nullable: value.is_nullable(),
-        }
-    }
-}
-
 fn main() -> Result<()> {
     let args = Options::parse();
     let reader = ParquetRecordBatchReaderBuilder::try_new(File::open(args.input)?)?
@@ -89,12 +71,21 @@ fn main() -> Result<()> {
     }
     let schema = reader.schema();
     if !args.no_types {
-        let fields = schema
-            .fields()
-            .iter()
-            .map(|f| PrintedField::from(f.as_ref()))
-            .collect::<Vec<_>>();
-        println!("{}", Table::new(fields).with(Style::rounded()));
+        let fields = schema.fields().iter().map(|f| {
+            vec![
+                Cell::new(f.name()),
+                Cell::new(f.data_type().to_string()),
+                Cell::new(f.is_nullable().to_string()),
+            ]
+        });
+        println!(
+            "{}",
+            Table::new()
+                .load_preset(UTF8_FULL_CONDENSED)
+                .apply_modifier(UTF8_ROUND_CORNERS)
+                .set_header(vec!["name", "data type", "nullable"])
+                .add_rows(fields)
+        );
     }
     if !args.only_types {
         let field_names = schema.fields().iter().map(|f| f.name().clone());
@@ -152,16 +143,25 @@ fn main() -> Result<()> {
         let rows = columns
             .iter()
             .flat_map(|(num_rows, columns)| {
-                (0..*num_rows).map(|i| columns.iter().map(move |col| col.value(i).try_to_string()))
+                (0..*num_rows).map(|i| {
+                    columns
+                        .iter()
+                        .map(move |col| col.value(i).try_to_string().map(Cell::new))
+                })
             })
             .skip(skip)
             .take(take);
-        let mut builder = Builder::new();
+        let mut table = Table::new();
         for row in rows {
-            builder.push_record(row.collect::<Result<Vec<_>, _>>()?);
+            table.add_row(row.collect::<Result<Vec<_>, _>>()?);
         }
-        builder.set_header(field_names);
-        println!("{}", builder.build().with(Style::rounded()));
+        println!(
+            "{}",
+            table
+                .set_header(field_names)
+                .load_preset(UTF8_FULL_CONDENSED)
+                .apply_modifier(UTF8_ROUND_CORNERS)
+        );
     }
     Ok(())
 }
