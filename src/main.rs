@@ -6,7 +6,6 @@ use clap::Parser;
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use std::{ffi::OsString, fs::File};
 use tabled::{builder::Builder, settings::Style, Table, Tabled};
-use tryiterator::TryIteratorExt;
 
 #[derive(Debug, Parser)]
 #[command(about, version, author)]
@@ -136,7 +135,7 @@ fn main() -> Result<()> {
             .into_iter()
             .skip(skip_batches)
             .take(take_batches)
-            .try_collect::<Vec<_>>()?;
+            .collect::<Result<Vec<_>, _>>()?;
         let columns = batches
             .iter()
             .map(|batch| {
@@ -146,10 +145,10 @@ fn main() -> Result<()> {
                     .enumerate()
                     .filter(|(i, _)| field_indices.contains(i))
                     .map(|(_, c)| ArrayFormatter::try_new(c, &FormatOptions::default()))
-                    .try_collect::<Vec<_>>()
+                    .collect::<Result<Vec<_>, _>>()
                     .map(|columns| (batch.num_rows(), columns))
             })
-            .try_collect::<Vec<_>>()?;
+            .collect::<Result<Vec<_>, _>>()?;
         let rows = columns
             .iter()
             .flat_map(|(num_rows, columns)| {
@@ -159,7 +158,7 @@ fn main() -> Result<()> {
             .take(take);
         let mut builder = Builder::new();
         for row in rows {
-            builder.push_record(row.try_collect::<Vec<_>>()?);
+            builder.push_record(row.collect::<Result<Vec<_>, _>>()?);
         }
         builder.set_header(field_names);
         println!("{}", builder.build().with(Style::rounded()));

@@ -800,7 +800,6 @@ dependencies = [
  "clap",
  "parquet",
  "tabled",
- "tryiterator",
 ]
 
 [[package]]
@@ -968,11 +967,6 @@ checksum = "2c9d3793400a45f954c52e73d068316d76b6f4e36977e3fcebb13a2721e80237"
 dependencies = [
  "crunchy",
 ]
-
-[[package]]
-name = "tryiterator"
-version = "0.1.0"
-source = "git+https://github.com/Pernosco/tryiterator.git#859bbd68c67f64fc6e62339cfea99654b22965d2"
 
 [[package]]
 name = "twox-hash"
