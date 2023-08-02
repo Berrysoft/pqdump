@@ -1,9 +1,8 @@
-use anyhow::Result;
 use arrow_array::RecordBatchReader;
 use arrow_cast::display::{ArrayFormatter, FormatOptions};
 use clap::Parser;
 use comfy_table::{modifiers::UTF8_ROUND_CORNERS, presets::UTF8_FULL_CONDENSED, Cell, Table};
-use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
+use parquet::{arrow::arrow_reader::ParquetRecordBatchReaderBuilder, errors::Result};
 use std::{ffi::OsString, fs::File};
 
 #[derive(Debug, Parser)]
