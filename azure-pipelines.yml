@@ -1,0 +1,15 @@
+trigger:
+  branches:
+    include:
+      - master
+  paths:
+    exclude:
+      - .github/
+      - README.md
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+- script: cargo build --release
+  displayName: 'Build'
