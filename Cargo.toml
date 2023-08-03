@@ -7,9 +7,9 @@ edition = "2021"
 clap = { version = "4", features = ["derive"] }
 comfy-table = { version = "7", default-features = false }
 
-arrow-array = "44"
-arrow-cast = "44"
-parquet = "44"
+arrow-array = "45"
+arrow-cast = "45"
+parquet = "45"
 
 [profile.release]
 lto = true
