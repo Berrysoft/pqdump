@@ -9,7 +9,9 @@ Arguments:
   <INPUT>  
 
 Options:
+  -b, --batch <BATCH>      Batch size [default: 1024]
   -n, --length             Print the number of rows and exit
+      --num-row-groups     Print the number of row groups and exit
   -A, --only-types         Print the datatypes only
       --no-types           Suppress printing the datatypes
       --head <HEAD>        Print the first rows
