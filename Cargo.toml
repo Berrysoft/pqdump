@@ -2,14 +2,17 @@
 name = "pqdump"
 version = "0.1.0"
 edition = "2021"
+authors = ["Berrysoft <Strawberry_Str@hotmail.com>"]
+description = "A simple program to dump Parquet files."
+license = "MIT"
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 comfy-table = { version = "7", default-features = false }
 
-arrow-array = "45"
-arrow-cast = "45"
-parquet = "45"
+arrow-array = "46"
+arrow-cast = "46"
+parquet = "46"
 
 [profile.release]
 lto = true
