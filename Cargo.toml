@@ -10,7 +10,7 @@ license = "MIT"
 clap = { version = "4", features = ["derive"] }
 comfy-table = { version = "7", default-features = false }
 
-arrow-array = "49"
+arrow-array = "50"
 arrow-cast = "49"
 parquet = "49"
 
