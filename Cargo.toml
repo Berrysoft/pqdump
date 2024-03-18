@@ -11,7 +11,7 @@ clap = { version = "4", features = ["derive"] }
 comfy-table = { version = "7", default-features = false }
 
 arrow-array = "50"
-arrow-cast = "50"
+arrow-cast = "51"
 parquet = "50"
 
 [profile.release]
