@@ -12,7 +12,7 @@ comfy-table = { version = "7", default-features = false }
 
 arrow-array = "50"
 arrow-cast = "50"
-parquet = "50"
+parquet = "51"
 
 [profile.release]
 lto = true
