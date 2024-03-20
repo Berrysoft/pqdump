@@ -10,9 +10,9 @@ license = "MIT"
 clap = { version = "4", features = ["derive"] }
 comfy-table = { version = "7", default-features = false }
 
-arrow-array = "50"
-arrow-cast = "50"
-parquet = "50"
+arrow-array = "51"
+arrow-cast = "51"
+parquet = "51"
 
 [profile.release]
 lto = true
