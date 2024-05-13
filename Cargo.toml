@@ -5,6 +5,7 @@ edition = "2021"
 authors = ["Berrysoft <Strawberry_Str@hotmail.com>"]
 description = "A simple program to dump Parquet files."
 license = "MIT"
+repository = "https://github.com/Berrysoft/pqdump"
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
