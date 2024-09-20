@@ -11,9 +11,9 @@ repository = "https://github.com/Berrysoft/pqdump"
 clap = { version = "4", features = ["derive"] }
 comfy-table = { version = "7", default-features = false }
 
-arrow-array = "51"
-arrow-cast = "51"
-parquet = "51"
+arrow-array = "53"
+arrow-cast = "53"
+parquet = "53"
 
 [profile.release]
 lto = true
