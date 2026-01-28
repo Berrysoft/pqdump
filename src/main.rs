@@ -70,7 +70,7 @@ fn writeln<T: std::fmt::Display, W: std::io::Write>(out: &mut W, val: T) -> Resu
 
 fn main() -> Result<()> {
     let args = Options::parse();
-    let mut out = std::io::stdout().lock();
+    let mut out = std::io::stdout();
     let reader = ParquetRecordBatchReaderBuilder::try_new(File::open(args.input)?)?
         .with_batch_size(args.batch);
     let metadata = reader.metadata();
