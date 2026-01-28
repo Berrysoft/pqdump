@@ -60,19 +60,28 @@ struct ColOptions {
     exclude: Option<Vec<String>>,
 }
 
+fn writeln<T: std::fmt::Display, W: std::io::Write>(out: &mut W, val: T) -> Result<()> {
+    match std::writeln!(out, "{val}") {
+        Ok(()) => Ok(()),
+        Err(err) if err.kind() == std::io::ErrorKind::BrokenPipe => Ok(()),
+        Err(err) => Err(err.into()),
+    }
+}
+
 fn main() -> Result<()> {
     let args = Options::parse();
+    let mut out = std::io::stdout();
     let reader = ParquetRecordBatchReaderBuilder::try_new(File::open(args.input)?)?
         .with_batch_size(args.batch);
     let metadata = reader.metadata();
     if args.print.num_row_groups {
-        println!("{}", metadata.num_row_groups());
+        writeln(&mut out, metadata.num_row_groups())?;
         return Ok(());
     }
     let len = reader.metadata().file_metadata().num_rows() as usize;
     let reader = reader.build()?;
     if args.print.length {
-        println!("{}", len);
+        writeln(&mut out, len)?;
         return Ok(());
     }
     let schema = reader.schema();
@@ -84,14 +93,14 @@ fn main() -> Result<()> {
                 Cell::new(f.is_nullable().to_string()),
             ]
         });
-        println!(
-            "{}",
+        writeln(
+            &mut out,
             Table::new()
                 .load_preset(UTF8_FULL_CONDENSED)
                 .apply_modifier(UTF8_ROUND_CORNERS)
                 .set_header(vec!["name", "data type", "nullable"])
-                .add_rows(fields)
-        );
+                .add_rows(fields),
+        )?;
     }
     if !args.print.only_types {
         let field_names = schema.fields().iter().map(|f| f.name().clone());
@@ -161,13 +170,13 @@ fn main() -> Result<()> {
         for row in rows {
             table.add_row(row.collect::<Result<Vec<_>, _>>()?);
         }
-        println!(
-            "{}",
+        writeln(
+            &mut out,
             table
                 .set_header(field_names)
                 .load_preset(UTF8_FULL_CONDENSED)
-                .apply_modifier(UTF8_ROUND_CORNERS)
-        );
+                .apply_modifier(UTF8_ROUND_CORNERS),
+        )?;
     }
     Ok(())
 }
